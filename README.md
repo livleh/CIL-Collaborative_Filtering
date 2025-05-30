@@ -15,6 +15,16 @@ This repository provides implementations of various collaborative filtering meth
 7. **Attention-based** – Model incorporating attention mechanisms
 8. **Modified Deep Matrix** – Deep matrix factorization variant
 
+## Installation
+You can set up the environment using [`conda`][1]:
+```bash
+$ conda env create -f environment.yml
+$ source activate cil_env
+```
+Alternatively, use `pip` to install the dependencies listed in the `requirements.txt` file:
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
@@ -28,7 +38,7 @@ python run.py \
     --val_size <x>
 ```
 
-### Parameters
+### Arguments
 
 * `--model`: Select the algorithm to run.
 * `--mode`: Choose the operation mode:
@@ -39,3 +49,8 @@ python run.py \
 * `--fold <n>`: Number of folds for cross-validation (only used if `--mode=cv`).
 * `--val_size <x>`: Proportion of the dataset to use for validation (only used if `--mode=predict`).
 
+## Configuration
+You can change the training parameters of each model by altering the `config.py` file.
+
+
+[1]:https://conda.io/docs/user-guide/install/index.html
