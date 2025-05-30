@@ -44,7 +44,7 @@ python run.py \
 * `--mode`: Choose the operation mode:
 
   * `train`: Train the selected model.
-  * `predict`: Generate predictions using a trained model.
+  * `predict`: Train the selected model and generate predictions.
   * `cv`: Perform cross-validation.
 * `--fold <n>`: Number of folds for cross-validation (only used if `--mode=cv`).
 * `--val_size <x>`: Proportion of the dataset to use for validation (only used if `--mode=predict`).
