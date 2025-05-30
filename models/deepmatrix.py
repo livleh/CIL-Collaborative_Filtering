@@ -31,7 +31,7 @@ torch.manual_seed(SEED)
 np.random.seed(SEED)
 
 def impute_values(mat: np.ndarray) -> np.ndarray:
-    return np.nan_to_num(mat, nan=3.0)
+    return np.nan_to_num(mat, nan=0.0)
 
 def get_dataset(df: pd.DataFrame) -> torch.utils.data.Dataset:
     """Conversion from pandas data frame to torch dataset."""
