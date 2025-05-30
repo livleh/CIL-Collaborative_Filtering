@@ -240,7 +240,7 @@ def train(model, train_loader, valid_loader, device, optim):
 def batched_pred_fn(model, sids, pids, device, batch_size=BATCH_SIZE):
     results = []
     num_samples = len(sids)
-    best_model_path = os.path.join(SUBMISSION_DIR, f"{MODEL_NAME}_best_val_rmse.pth")
+    best_model_path = os.path.join(OUTPUT_DIR, f"{MODEL_NAME}_best_val_rmse.pth")
     model.load_state_dict(torch.load(best_model_path))
     model.eval()
 
@@ -342,5 +342,5 @@ def run(args):
         
         if mode == 'predict':
             with torch.no_grad():
-                make_submission(batched_pred_fn, "submissions/deep_matrix_submission_no_dropout.csv")
+                make_submission("submissions/deep_matrix_submission.csv", model, device)
             
