@@ -1,15 +1,10 @@
 import os
-import pandas as pd
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
 import random
 import gc
 from data_handler.data_handler import *
-from typing import Tuple
-from sklearn.model_selection import train_test_split
-from sklearn.model_selection import KFold
 from tqdm.auto import tqdm, trange
 
 
@@ -192,9 +187,8 @@ def save_predictions_csv(model, train_loader, valid_loader, device, train_output
             # Collect results as list of dictionaries
             for s, p, pred in zip(sid.cpu(), pid.cpu(), predictions.cpu()):
                 results.append({
-                    "sid": s.item(),
-                    "pid": p.item(),
-                    "predicted": pred.item()
+                    "sid_pid": f"{s.item()}_{p.item()}",
+                    "rating": pred.item()
                 })
 
         return results
@@ -229,11 +223,21 @@ def get_dataset_combined(rating_file: str, pred_sid_file: str, pred_pid_file: st
     pred_sid_df = pd.read_csv(os.path.join(DATA_DIR, pred_sid_file))
     pred_pid_df = pd.read_csv(os.path.join(DATA_DIR, pred_pid_file))
 
-    # Extract 'sid' and 'pid' from 'sid_pid' column in rating_df
+    # Extract 'sid' and 'pid' from 'sid_pid' column
     rating_df[['sid', 'pid']] = rating_df['sid_pid'].str.split("_", expand=True)
     rating_df = rating_df.drop(columns=["sid_pid"])
     rating_df["sid"] = rating_df["sid"].astype(int)
     rating_df["pid"] = rating_df["pid"].astype(int)
+
+    pred_sid_df[['sid', 'pid']] = pred_sid_df['sid_pid'].str.split("_", expand=True)
+    pred_sid_df = pred_sid_df.drop(columns=["sid_pid"])
+    pred_sid_df["sid"] = pred_sid_df["sid"].astype(int)
+    pred_sid_df["pid"] = pred_sid_df["pid"].astype(int)
+
+    pred_pid_df[['sid', 'pid']] = pred_pid_df['sid_pid'].str.split("_", expand=True)
+    pred_pid_df = pred_pid_df.drop(columns=["sid_pid"])
+    pred_pid_df["sid"] = pred_pid_df["sid"].astype(int)
+    pred_pid_df["pid"] = pred_pid_df["pid"].astype(int)
 
     # Merge prediction files on (sid, pid)
     merged_df = pd.merge(pred_sid_df, pred_pid_df, on=["sid", "pid"], suffixes=('_sid', '_pid'))
@@ -245,8 +249,8 @@ def get_dataset_combined(rating_file: str, pred_sid_file: str, pred_pid_file: st
     sids = torch.tensor(merged_df["sid"].values, dtype=torch.int)
     pids = torch.tensor(merged_df["pid"].values, dtype=torch.int)
     ratings = torch.tensor(merged_df["rating"].values, dtype=torch.float)
-    preds_sid = torch.tensor(merged_df["predicted_sid"].values, dtype=torch.float)
-    preds_pid = torch.tensor(merged_df["predicted_pid"].values, dtype=torch.float)
+    preds_sid = torch.tensor(merged_df["rating_sid"].values, dtype=torch.float)
+    preds_pid = torch.tensor(merged_df["rating_pid"].values, dtype=torch.float)
 
     # Create TensorDataset
     dataset = torch.utils.data.TensorDataset(sids, pids, ratings, preds_sid, preds_pid)
@@ -544,6 +548,7 @@ class RecommenderFinal(nn.Module):
         return out
     
 def train(train_df, valid_df, tbr_df, device):
+
     model_sid = AttentionRecommenderSID(num_sids=NUM_SCIENTISTS, num_pids=NUM_PAPERS, emb_dim=EMBEDDING_DIM, dropout_rate=DROPOUT_RATE, num_heads=NUM_HEADS).to(device)
     optim_sid = torch.optim.Adam(model_sid.parameters(), lr=LEARNING_RATE, weight_decay=L2_REG)
 
@@ -563,12 +568,10 @@ def train(train_df, valid_df, tbr_df, device):
     valid_loader_pid = torch.utils.data.DataLoader(valid_dataset_pid, batch_size=BATCH_SIZE, shuffle=False)
         
     train_rmse_sid, val_rmse_sid = train_model(model_sid, optim_sid, device, EPOCHS, train_loader_sid, valid_loader_sid)
-    torch.save(model_sid.state_dict(), 'attention_recommender_sid.pt')
-    
+
     save_predictions_csv(model_sid, train_loader_sid, valid_loader_sid, device, train_output_file="data/sid_train_predictions.csv", valid_output_file="data/sid_valid_predictions.csv")
 
     train_rmse_pid, val_rmse_pid = train_model(model_pid, optim_pid, device, EPOCHS, train_loader_pid, valid_loader_pid)
-    torch.save(model_pid.state_dict(), 'attention_recommender_pid.pt')
 
     save_predictions_csv(model_pid, train_loader_pid, valid_loader_pid, device, train_output_file="data/pid_train_predictions.csv", valid_output_file="data/pid_valid_predictions.csv")
 
@@ -582,7 +585,6 @@ def train(train_df, valid_df, tbr_df, device):
     optim_combined = torch.optim.Adam(model_combined.parameters(), lr=LEARNING_RATE, weight_decay=L2_REG)
 
     train_rmse, val_rmse = train_model(model_combined, optim_combined, device, EPOCHS, train_loader_combined, valid_loader_combined)
-    torch.save(model_combined.state_dict(), 'attention_recommender_combined.pt')
 
     return model_combined, train_rmse_sid, train_rmse_pid, train_rmse, val_rmse_sid, val_rmse_pid, val_rmse
 
